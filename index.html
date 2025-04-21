@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>fMRI Piñata Task</title>
+  <script src="https://cdn.jsdelivr.net/npm/jspsych@7.3.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-keyboard-response@1.1.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-button-response@1.1.0"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background-color: #f2fbff; }
+    .stimulus { font-size: 2em; margin: 20px; }
+    .feedback { font-size: 1.5em; color: green; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>fMRI Piñata Game</h1>
+  <div id="jspsych-target"></div>
+  <script>
+    const timeline = [];
+
+    const instructions = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: '<p>Welcome to the Pi\u00f1ata Game!</p><p>Hit the spacebar as fast as you can when you see the pi\u00f1ata!</p>',
+      choices: ['Start']
+    };
+    timeline.push(instructions);
+
+    for (let i = 0; i < 5; i++) {
+      timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<p class="stimulus">🎯 Get Ready...</p>',
+        choices: "NO_KEYS",
+        trial_duration: 1000
+      });
+
+      const delay = Math.floor(Math.random() * 1000) + 1000;
+      timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<p class="stimulus">⏳...</p>',
+        choices: "NO_KEYS",
+        trial_duration: delay
+      });
+
+      const target = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<p class="stimulus">🎉 Smash the Pi\u00f1ata! (Press Space)</p>',
+        choices: [' '],
+        data: { task: 'target' },
+        trial_duration: 1500,
+        on_finish: function(data) {
+          data.reaction_time = data.rt;
+          data.hit = data.rt !== null;
+        }
+      };
+      timeline.push(target);
+
+      const feedback = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: function() {
+          const last = jsPsych.data.get().last(1).values()[0];
+          return last.hit ? '<p class="feedback">🎊 You got it! +10 points</p>' : '<p class="feedback" style="color:red">⛔ Missed! No points</p>';
+        },
+        choices: "NO_KEYS",
+        trial_duration: 1000
+      };
+      timeline.push(feedback);
+    }
+
+    const summary = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: function() {
+        const trials = jsPsych.data.get().filter({task: 'target'});
+        const hits = trials.filter({hit: true}).count();
+        const avgRT = Math.round(trials.select('reaction_time').mean());
+        return `<p>Game Over!</p><p>You hit ${hits} out of ${trials.count()} targets.</p><p>Your average reaction time was ${avgRT} ms.</p>`;
+      },
+      choices: ['Finish']
+    };
+    timeline.push(summary);
+
+    jsPsych.run(timeline);
+  </script>
+</body>
+</html>
